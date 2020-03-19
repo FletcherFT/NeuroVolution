@@ -99,149 +99,36 @@ class Simulator:
         return results
 
 
-# TODO TEST SIMTHREAD
-class SimThread(Thread):
-    """Thread to simulate."""
-    def __init__(self, jobs, results):
-        # Keep thread job queue
-        self._jobs = jobs
-        # Keep results job queue
-        self._results = results
-        # Create an agent
-        self._agent = Agent()
-        # Create an environment
-        self._env = Env()
-        # Initialise the Thread class
-        super().__init__(target=self._thread())
-
-    def _thread(self):
-        # When thread is started, begin infinite loop
-        while True:
-            # Get a job (one simulation to run)
-            job = self._jobs.get()
-            # End worker if the job is None
-            if job is None:
-                break
-            # Decompose job into id, agent and env objects
-            idx, weight = job
-            # If the weight is a list, then update the weights. Otherwise let the random initialisation.
-            if isinstance(weight, list):
-                self._agent.model.set_weights(weight)
-            print("Simulation {}... processing.".format(idx))
-            # Run a simulation on the agent and environment, get costs
-            d, e, t = _run_agent(self._agent, self._env)
-            # Reset the environment
-            self._env.reset()
-            # Bundle results and weight with idx and place in results queue
-            self._results.put((idx, weight, d, e, t))
-            print("Simulation {}... done.".format(idx))
-            # Flag the task as done for the simulations queue
-            self._jobs.task_done()
-        self._jobs.task_done()
-
-
-# TODO TEST SIMPROC
-class SimProc(multiprocessing.Process):
-    """A process that will spin up some threads."""
-    def __init__(self, simulations, results, num_threads=4):
-        super().__init__(target=self._proc)
-        # Store the number of threads to be generated.
-        self._num_threads = num_threads
-        # Store the given simulations queue object.
-        self._simulations = simulations
-        # Store the given results queue object.
-        self._results = results
-        # Initialise the jobs queue object.
-        self._jobs = Queue()
-        # Initialise the threads to run.
-        self._threads = [SimThread(self._jobs, self._results) for _ in range(self._num_threads)]
-
-    def _proc(self):
-        # Start the threads attached to this process
-        for t in self._threads:
-            t.start()
-        # Now loop continuously
-        while True:
-            # Get a batch of simulations
-            batch = self._simulations.get()
-            # If the simulation is None, then kill the process
-            if batch is None:
-                break
-            # Put each simulation into the thread job queue
-            for sim in batch:
-                self._jobs.put(sim)
-            # Block until all simulations in batch are done
-            self._jobs.join()
-            # Mark the simulation batch as done.
-            self._simulations.task_done()
-        # Send None objects to each thread (so they exit)
-        for _ in range(self._num_threads):
-            self._jobs.put(None)
-        # Block until all items in job queue are processed.
-        self._jobs.join()
-        # Kill the threads
-        for t in self._threads:
-            t.join()
-        # Mark the close task as done.
-        self._simulations.task_done()
-
-
-class SimulatorMP:
-    def __init__(self, n, num_procs=1, num_threads=1):
-        # The population size
-        self._n = n
-        # The number of processes
-        self._num_procs = num_procs
-        # The number of threads per process
-        self._num_threads = num_threads
-        # Initialize the simulations
-        self._simulations = multiprocessing.Queue()
-        # Initialize the results
-        self._results = multiprocessing.Queue()
-        # Initialise the processes
-        self._procs = [SimProc(self._simulations, self._results, self._num_threads) for _ in range(self._num_procs)]
-        # Start/Stop Flag
-        self._is_running = False
-
-    def start(self):
-        # Start the processes
-        for p in self._procs:
-            p.start()
-        self._is_running = True
-
-    def run_sim(self, weights=-1):
-        # Check if the processes have been started before putting anything in Queue
-        if not self._is_running:
-            return
-        # If weights is not a list, then send a list of -1's to queue (keep initial random weights for each Agent)
-        if not isinstance(weights, list):
-            weights = [-1]*self._n
-        # Divide the simulations up into jobs for each process
-        simulations = list(zip(list(range(self._n)), weights))
-        simulations = list(chunks(simulations, self._num_procs))
-        # Send the simulations to the processes
-        for simulation in simulations:
-            self._simulations.put(simulation)
-        # Block until all simulations in queue are processed
-        self._simulations.join()
-        # Results queue should be populated, unpack.
-        results = []
-        for _ in range(self._n):
-            results.append(self._results.get())
-        results.sort()
-        return results
-
-    def stop(self):
-        # Signal close to all processes
-        for _ in range(self._num_procs):
-            self._simulations.put(None)
-        # Block until all simulations in queue are processed
-        self._simulations.join()
-        # Kill all processes
-        for p in self._procs:
-            p.join()
-        # Set the is_running flag to False
-        self._is_running = False
+def worker(jobs, results):
+    # Initialise the agent
+    agent = Agent()
+    # Initialise the environment
+    env = Env()
+    # Begin the loop
+    while True:
+        # Wait for a job to come in
+        j = jobs.get()
+        # If the job is None then finish the process
+        if j is None:
+            break
+        # Unpack the job
+        idx, weights = j
+        print("Simulation {}... processing.".format(idx))
+        # If the weights are a list, then update the agent weights
+        if isinstance(weights, list):
+            agent.model.set_weights(weights)
+        # Run the simulation
+        costs = _run_agent(agent, env)
+        # Pack the results and send
+        weights = agent.model.get_weights()
+        results.put((idx, weights) + costs)
+        # reset the environment
+        env.reset()
+        # Notify the job queue that the simulation is done
+        print("Simulation {}... done.".format(idx))
+        jobs.task_done()
+    # Notify the job queue that the exit command is done
+    jobs.task_done()
 
 
 def chunks(lst, n):

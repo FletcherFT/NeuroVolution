@@ -55,7 +55,7 @@ class Env:
         # Check if the goal has been reached.
         success = distance <= 1e-3
         self._i = self._i + 1
-        success = success or self._i == self._I
+        success = success or self._i >= self._I
         # Calculate the energy change due to change in control vector.
         energy = np.linalg.norm(w-self._w)**2
         # Update the control velocity with w
