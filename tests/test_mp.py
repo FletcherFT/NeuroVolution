@@ -1,7 +1,8 @@
 from multiprocessing import Process, cpu_count
 from multiprocessing import JoinableQueue as Queue
 from ZermeloSim.ZermeloSim import worker
-
+import time
+start = time.time()
 
 if __name__ == '__main__':
     n = 100
@@ -18,4 +19,4 @@ if __name__ == '__main__':
     for _ in range(p):
         jobs.put(None)
     jobs.join()
-    print(r)
+    print("Multi-Processing Took: {} secs".format(time.time()-start))
