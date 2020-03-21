@@ -11,13 +11,13 @@ Current Version: 1
 - [ ] Test multi-processing with threading implementation
 - [x] NDSA
 - [x] MOGA outer loop
+- [x] Verbosity option on ZermeloSim.ZermeloSim._worker
+- [x] Display results on MOGA_Zermelo.py
+- [ ] Log results on MOGA_Zermelo.py
 
 ### Version 2
 - [ ] Normalise shearflow environment.
 - [ ] Check and correct energy and time costs.
-- [ ] Verbosity option on ZermeloSim.ZermeloSim._worker
-- [ ] Display results on MOGA_Zermelo.py
-- [ ] Log results on MOGA_Zermelo.py
 - [ ] Potential bug: warnings about values of $$X_t$$ in ZermeloEnvironment
 
 ### Version 3

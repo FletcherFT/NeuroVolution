@@ -2,7 +2,6 @@ from multiprocessing import Process, cpu_count
 from multiprocessing import JoinableQueue as Queue
 from ZermeloSim.ZermeloSim import worker
 from MOGA.MOGA import NDSAGA
-import random
 
 
 if __name__ == '__main__':
@@ -28,10 +27,10 @@ if __name__ == '__main__':
     # Begin MOGA Loop Here
     for g in range(G):
         # STEP 1: GET FITNESSES
+        print("Iteration: {}".format(g))
         # Place the jobs into the simulation queue
         for job in zip(idx, weights):
             jobs.put(job)
-        #jobs.join()
         # Wait until all simulations are done
         r = [results.get() for _ in range(n)]
         # Sort the results
