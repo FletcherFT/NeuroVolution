@@ -2,7 +2,6 @@ from ZermeloSim.ZermeloAgent import Agent
 from ZermeloSim.ZermeloEnvironment import Env
 from threading import Thread
 from queue import Queue
-import multiprocessing
 
 
 def _run_agent(agent, env):
@@ -99,11 +98,11 @@ class Simulator:
         return results
 
 
-def worker(jobs, results):
+def worker(jobs, results, max_iters=1000):
     # Initialise the agent
     agent = Agent()
     # Initialise the environment
-    env = Env()
+    env = Env(max_iters=max_iters)
     # Begin the loop
     while True:
         # Wait for a job to come in
